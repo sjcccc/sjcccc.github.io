@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>next | sjc的blog</title>
+    <meta name="generator" content="VuePress 1.8.2">
+    
+    <meta name="description" content="sjc的知识梳理">
+    
+    <link rel="preload" href="/assets/css/0.styles.144bab3a.css" as="style"><link rel="preload" href="/assets/js/app.4771038d.js" as="script"><link rel="preload" href="/assets/js/2.7a57565e.js" as="script"><link rel="preload" href="/assets/js/14.df84de9b.js" as="script"><link rel="prefetch" href="/assets/js/10.56533af8.js"><link rel="prefetch" href="/assets/js/11.4e08c27f.js"><link rel="prefetch" href="/assets/js/12.d3ab59bf.js"><link rel="prefetch" href="/assets/js/13.fd69b434.js"><link rel="prefetch" href="/assets/js/15.3459f7fb.js"><link rel="prefetch" href="/assets/js/16.9da94d5d.js"><link rel="prefetch" href="/assets/js/17.0b19bcdd.js"><link rel="prefetch" href="/assets/js/18.9efe4c7f.js"><link rel="prefetch" href="/assets/js/3.6880a108.js"><link rel="prefetch" href="/assets/js/4.fa9e152b.js"><link rel="prefetch" href="/assets/js/5.b5d6e115.js"><link rel="prefetch" href="/assets/js/6.a064f96f.js"><link rel="prefetch" href="/assets/js/7.5a285784.js"><link rel="prefetch" href="/assets/js/8.c62bbc41.js"><link rel="prefetch" href="/assets/js/9.8e802ee2.js">
+    <link rel="stylesheet" href="/assets/css/0.styles.144bab3a.css">
+  </head>
+  <body>
+    <div id="app" data-server-rendered="true"><div class="theme-container"><header class="navbar"><div class="sidebar-button"><svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" role="img" viewBox="0 0 448 512" class="icon"><path fill="currentColor" d="M436 124H12c-6.627 0-12-5.373-12-12V80c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12zm0 160H12c-6.627 0-12-5.373-12-12v-32c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12zm0 160H12c-6.627 0-12-5.373-12-12v-32c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12z"></path></svg></div> <a href="/" class="home-link router-link-active"><!----> <span class="site-name">sjc的blog</span></a> <div class="links"><div class="search-box"><input aria-label="Search" autocomplete="off" spellcheck="false" value=""> <!----></div> <nav class="nav-links can-hide"><div class="nav-item"><a href="/unity/" class="nav-link">
+  Unity
+</a></div><div class="nav-item"><a href="/lua/" class="nav-link router-link-active">
+  Lua
+</a></div> <!----></nav></div></header> <div class="sidebar-mask"></div> <aside class="sidebar"><nav class="nav-links"><div class="nav-item"><a href="/unity/" class="nav-link">
+  Unity
+</a></div><div class="nav-item"><a href="/lua/" class="nav-link router-link-active">
+  Lua
+</a></div> <!----></nav>  <ul class="sidebar-links"><li><a href="/lua/baseType.html" class="sidebar-link">基础类型</a></li><li><a href="/lua/ipairsandpairs.html" class="sidebar-link">ipairs与pairs</a></li><li><a href="/lua/next.html" aria-current="page" class="active sidebar-link">next</a></li><li><a href="/lua/luaSourceCode_TValue.html" class="sidebar-link">lua源码TValue</a></li></ul> </aside> <main class="page"> <div class="theme-default-content content__default"><h1 id="next"><a href="#next" class="header-anchor">#</a> next</h1> <p>next的实现</p> <div class="language-lua extra-class"><pre class="language-lua"><code>int <span class="token function">luaH_next</span> <span class="token punctuation">(</span>lua_State <span class="token operator">*</span>L<span class="token punctuation">,</span> Table <span class="token operator">*</span>t<span class="token punctuation">,</span> StkId key<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  unsigned int asize <span class="token operator">=</span> <span class="token function">luaH_realasize</span><span class="token punctuation">(</span>t<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  unsigned int i <span class="token operator">=</span> <span class="token function">findindex</span><span class="token punctuation">(</span>L<span class="token punctuation">,</span> t<span class="token punctuation">,</span> <span class="token function">s2v</span><span class="token punctuation">(</span>key<span class="token punctuation">)</span><span class="token punctuation">,</span> asize<span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token operator">/</span><span class="token operator">*</span> find original key <span class="token operator">*</span><span class="token operator">/</span>
+  <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> asize<span class="token punctuation">;</span> i<span class="token operator">+</span><span class="token operator">+</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>  <span class="token operator">/</span><span class="token operator">*</span> try first array part <span class="token operator">*</span><span class="token operator">/</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>!<span class="token function">isempty</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>t<span class="token operator">-</span><span class="token operator">&gt;</span>array<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>  <span class="token operator">/</span><span class="token operator">*</span> a non<span class="token operator">-</span>empty entry? <span class="token operator">*</span><span class="token operator">/</span>
+      <span class="token function">setivalue</span><span class="token punctuation">(</span><span class="token function">s2v</span><span class="token punctuation">(</span>key<span class="token punctuation">)</span><span class="token punctuation">,</span> i <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token function">setobj2s</span><span class="token punctuation">(</span>L<span class="token punctuation">,</span> key <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token operator">&amp;</span>t<span class="token operator">-</span><span class="token operator">&gt;</span>array<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword">return</span> <span class="token number">1</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+  <span class="token keyword">for</span> <span class="token punctuation">(</span>i <span class="token operator">-</span><span class="token operator">=</span> asize<span class="token punctuation">;</span> <span class="token function">cast_int</span><span class="token punctuation">(</span>i<span class="token punctuation">)</span> <span class="token operator">&lt;</span> <span class="token function">sizenode</span><span class="token punctuation">(</span>t<span class="token punctuation">)</span><span class="token punctuation">;</span> i<span class="token operator">+</span><span class="token operator">+</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>  <span class="token operator">/</span><span class="token operator">*</span> hash part <span class="token operator">*</span><span class="token operator">/</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>!<span class="token function">isempty</span><span class="token punctuation">(</span><span class="token function">gval</span><span class="token punctuation">(</span><span class="token function">gnode</span><span class="token punctuation">(</span>t<span class="token punctuation">,</span> i<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>  <span class="token operator">/</span><span class="token operator">*</span> a non<span class="token operator">-</span>empty entry? <span class="token operator">*</span><span class="token operator">/</span>
+      Node <span class="token operator">*</span>n <span class="token operator">=</span> <span class="token function">gnode</span><span class="token punctuation">(</span>t<span class="token punctuation">,</span> i<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token function">getnodekey</span><span class="token punctuation">(</span>L<span class="token punctuation">,</span> <span class="token function">s2v</span><span class="token punctuation">(</span>key<span class="token punctuation">)</span><span class="token punctuation">,</span> n<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token function">setobj2s</span><span class="token punctuation">(</span>L<span class="token punctuation">,</span> key <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token function">gval</span><span class="token punctuation">(</span>n<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword">return</span> <span class="token number">1</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+  <span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>  <span class="token operator">/</span><span class="token operator">*</span> no more elements <span class="token operator">*</span><span class="token operator">/</span>
+<span class="token punctuation">}</span>
+</code></pre></div></div> <footer class="page-edit"><!----> <!----></footer> <div class="page-nav"><p class="inner"><span class="prev">
+      ←
+      <a href="/lua/ipairsandpairs.html" class="prev">
+        ipairs与pairs
+      </a></span> <span class="next"><a href="/lua/luaSourceCode_TValue.html">
+        lua源码TValue
+      </a>
+      →
+    </span></p></div> </main></div><div class="global-ui"></div></div>
+    <script src="/assets/js/app.4771038d.js" defer></script><script src="/assets/js/2.7a57565e.js" defer></script><script src="/assets/js/14.df84de9b.js" defer></script>
+  </body>
+</html>

@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>lua源码TValue | sjc的blog</title>
+    <meta name="generator" content="VuePress 1.8.2">
+    
+    <meta name="description" content="sjc的知识梳理">
+    
+    <link rel="preload" href="/assets/css/0.styles.144bab3a.css" as="style"><link rel="preload" href="/assets/js/app.4771038d.js" as="script"><link rel="preload" href="/assets/js/2.7a57565e.js" as="script"><link rel="preload" href="/assets/js/3.6880a108.js" as="script"><link rel="prefetch" href="/assets/js/10.56533af8.js"><link rel="prefetch" href="/assets/js/11.4e08c27f.js"><link rel="prefetch" href="/assets/js/12.d3ab59bf.js"><link rel="prefetch" href="/assets/js/13.fd69b434.js"><link rel="prefetch" href="/assets/js/14.df84de9b.js"><link rel="prefetch" href="/assets/js/15.3459f7fb.js"><link rel="prefetch" href="/assets/js/16.9da94d5d.js"><link rel="prefetch" href="/assets/js/17.0b19bcdd.js"><link rel="prefetch" href="/assets/js/18.9efe4c7f.js"><link rel="prefetch" href="/assets/js/4.fa9e152b.js"><link rel="prefetch" href="/assets/js/5.b5d6e115.js"><link rel="prefetch" href="/assets/js/6.a064f96f.js"><link rel="prefetch" href="/assets/js/7.5a285784.js"><link rel="prefetch" href="/assets/js/8.c62bbc41.js"><link rel="prefetch" href="/assets/js/9.8e802ee2.js">
+    <link rel="stylesheet" href="/assets/css/0.styles.144bab3a.css">
+  </head>
+  <body>
+    <div id="app" data-server-rendered="true"><div class="theme-container"><header class="navbar"><div class="sidebar-button"><svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" role="img" viewBox="0 0 448 512" class="icon"><path fill="currentColor" d="M436 124H12c-6.627 0-12-5.373-12-12V80c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12zm0 160H12c-6.627 0-12-5.373-12-12v-32c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12zm0 160H12c-6.627 0-12-5.373-12-12v-32c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12z"></path></svg></div> <a href="/" class="home-link router-link-active"><!----> <span class="site-name">sjc的blog</span></a> <div class="links"><div class="search-box"><input aria-label="Search" autocomplete="off" spellcheck="false" value=""> <!----></div> <nav class="nav-links can-hide"><div class="nav-item"><a href="/unity/" class="nav-link">
+  Unity
+</a></div><div class="nav-item"><a href="/lua/" class="nav-link router-link-active">
+  Lua
+</a></div> <!----></nav></div></header> <div class="sidebar-mask"></div> <aside class="sidebar"><nav class="nav-links"><div class="nav-item"><a href="/unity/" class="nav-link">
+  Unity
+</a></div><div class="nav-item"><a href="/lua/" class="nav-link router-link-active">
+  Lua
+</a></div> <!----></nav>  <ul class="sidebar-links"><li><a href="/lua/baseType.html" class="sidebar-link">基础类型</a></li><li><a href="/lua/ipairsandpairs.html" class="sidebar-link">ipairs与pairs</a></li><li><a href="/lua/next.html" class="sidebar-link">next</a></li><li><a href="/lua/luaSourceCode_TValue.html" aria-current="page" class="active sidebar-link">lua源码TValue</a><ul class="sidebar-sub-headers"><li class="sidebar-sub-header"><a href="/lua/luaSourceCode_TValue.html#设计思路" class="sidebar-link">设计思路</a></li><li class="sidebar-sub-header"><a href="/lua/luaSourceCode_TValue.html#实现" class="sidebar-link">实现</a></li></ul></li></ul> </aside> <main class="page"> <div class="theme-default-content content__default"><h1 id="lua源码tvalue"><a href="#lua源码tvalue" class="header-anchor">#</a> lua源码TValue</h1> <h2 id="设计思路"><a href="#设计思路" class="header-anchor">#</a> 设计思路</h2> <p>Lua是一门动态类型的脚本语言，这意味着同一个变量可以在不同时刻指向不同类型的数据<br>
+这部分实现思路1是定义通用的base结构体<br> <img src="/assets/img/TValue1.0f91423d.png" alt="TValue1"><br>
+思路2是使用union共用体<br> <img src="/assets/img/TValue2.fa45b005.png" alt="TValue2"><br>
+lua使用的是第二种，C提供的union很适合处理这种情况</p> <h3 id="union"><a href="#union" class="header-anchor">#</a> union</h3> <p>结构体和共用体的区别在于：<br>
+结构体的各个成员会占用不同的内存，互相之间没有影响；而共用体的所有成员占用同一段内存，修改一个成员会影响其余所有成员。<br>
+结构体占用的内存大于等于所有成员占用的内存的总和（成员之间可能会存在缝隙），共用体占用的内存等于最长的成员占用的内存。<br>
+共用体使用了内存覆盖技术，同一时刻只能保存一个成员的值，如果对新的成员赋值，就会把原来成员的值覆盖掉。</p> <h2 id="实现"><a href="#实现" class="header-anchor">#</a> 实现</h2> <p>lua使用了TValue来去实现同一个变量可以在不同时刻指向不同类型的数据这个功能</p> <div class="language-c extra-class"><pre class="language-c"><code><span class="token comment">/*
+** Tagged Values. This is the basic representation of values in Lua,
+** an actual value plus a tag with its type.
+*/</span>
+
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name">TValuefields</span>	<span class="token expression">Value value_<span class="token punctuation">;</span> <span class="token keyword">int</span> tt_</span></span>
+
+<span class="token keyword">typedef</span> <span class="token keyword">struct</span> <span class="token class-name">lua_TValue</span> TValue<span class="token punctuation">;</span>
+
+<span class="token keyword">union</span> Value <span class="token punctuation">{</span>
+  GCObject <span class="token operator">*</span>gc<span class="token punctuation">;</span>    <span class="token comment">/* collectable objects */</span>
+  <span class="token keyword">void</span> <span class="token operator">*</span>p<span class="token punctuation">;</span>         <span class="token comment">/* light userdata */</span>
+  <span class="token keyword">int</span> b<span class="token punctuation">;</span>           <span class="token comment">/* booleans */</span>
+  lua_CFunction f<span class="token punctuation">;</span> <span class="token comment">/* light C functions */</span>
+  numfield         <span class="token comment">/* numbers */</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+
+<span class="token keyword">struct</span> <span class="token class-name">lua_TValue</span> <span class="token punctuation">{</span>
+  TValuefields<span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+</code></pre></div><p>可以看到TValue是lua_TValue结构体的一个别名，他有成员TValuefields，即Value类型的变量value_,和int类型的tt_<br>
+int tt_比较好理解，它负责储存TValue的类型</p> <div class="language-c extra-class"><pre class="language-c"><code><span class="token comment">/*
+** basic types
+*/</span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name">LUA_TNONE</span>		<span class="token expression"><span class="token punctuation">(</span><span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">)</span></span></span>
+
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name">LUA_TNIL</span>		<span class="token expression"><span class="token number">0</span></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name">LUA_TBOOLEAN</span>		<span class="token expression"><span class="token number">1</span></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name">LUA_TLIGHTUSERDATA</span>	<span class="token expression"><span class="token number">2</span></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name">LUA_TNUMBER</span>		<span class="token expression"><span class="token number">3</span></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name">LUA_TSTRING</span>		<span class="token expression"><span class="token number">4</span></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name">LUA_TTABLE</span>		<span class="token expression"><span class="token number">5</span></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name">LUA_TFUNCTION</span>		<span class="token expression"><span class="token number">6</span></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name">LUA_TUSERDATA</span>		<span class="token expression"><span class="token number">7</span></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name">LUA_TTHREAD</span>		<span class="token expression"><span class="token number">8</span></span></span>
+
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name">LUA_NUMTAGS</span>		<span class="token expression"><span class="token number">9</span></span></span>
+</code></pre></div><p>在lua.h中定义好了这些lua中的类型<br>
+Value value_负责储存TValue的值<br>
+可以看到它包含了4中不需要进行gc的类型，void *p负责不需要gc的C数据，int b储存布尔变量，lua_CFunction f是c的方法，numfield为数字类型,是个double类型</p> <div class="language-c extra-class"><pre class="language-c"><code><span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name">numfield</span>	<span class="token expression">lua_Number n<span class="token punctuation">;</span>    </span><span class="token comment">/* numbers */</span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name">LUA_NUMBER</span>	<span class="token expression"><span class="token keyword">double</span></span></span>
+</code></pre></div><p>还有个GCObject *gc是lua中需要进行gc的类型</p> <div class="language-c extra-class"><pre class="language-c"><code><span class="token comment">/*
+** Union of all collectable objects
+*/</span>
+<span class="token keyword">union</span> GCObject <span class="token punctuation">{</span>
+  GCheader gch<span class="token punctuation">;</span>  <span class="token comment">/* common header */</span>
+  <span class="token keyword">union</span> TString ts<span class="token punctuation">;</span>
+  <span class="token keyword">union</span> Udata u<span class="token punctuation">;</span>
+  <span class="token keyword">union</span> Closure cl<span class="token punctuation">;</span>
+  <span class="token keyword">struct</span> <span class="token class-name">Table</span> h<span class="token punctuation">;</span>
+  <span class="token keyword">struct</span> <span class="token class-name">Proto</span> p<span class="token punctuation">;</span>
+  <span class="token keyword">struct</span> <span class="token class-name">UpVal</span> uv<span class="token punctuation">;</span>
+  <span class="token keyword">struct</span> <span class="token class-name">lua_State</span> th<span class="token punctuation">;</span>  <span class="token comment">/* thread */</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+</code></pre></div><p>它包括了TString lua的字符串，Udata u是需要gc的userdata，Closure cl是lua的闭包，Table h是lua的表（Proto p和UpVal uv后面在整理），lua_State th这个是thread<br>
+GCHeader是一个链表，用来储存所有需要gc的列表</p> <div class="language-c extra-class"><pre class="language-c"><code><span class="token comment">/*
+** Common Header for all collectable objects (in macro form, to be
+** included in other objects)
+*/</span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name">CommonHeader</span>	<span class="token expression">GCObject <span class="token operator">*</span>next<span class="token punctuation">;</span> lu_byte tt<span class="token punctuation">;</span> lu_byte marked</span></span>
+
+<span class="token comment">/*
+** Common header in struct form
+*/</span>
+<span class="token keyword">typedef</span> <span class="token keyword">struct</span> <span class="token class-name">GCheader</span> <span class="token punctuation">{</span>
+  CommonHeader<span class="token punctuation">;</span>
+<span class="token punctuation">}</span> GCheader<span class="token punctuation">;</span>
+</code></pre></div><p>这里的next就是指向下个可gc的object</p> <h3 id="tvalue的结构图"><a href="#tvalue的结构图" class="header-anchor">#</a> TValue的结构图</h3> <p><img src="/assets/img/TValue3.8bbb337c.png" alt="TValue3"></p></div> <footer class="page-edit"><!----> <!----></footer> <div class="page-nav"><p class="inner"><span class="prev">
+      ←
+      <a href="/lua/next.html" class="prev">
+        next
+      </a></span> <!----></p></div> </main></div><div class="global-ui"></div></div>
+    <script src="/assets/js/app.4771038d.js" defer></script><script src="/assets/js/2.7a57565e.js" defer></script><script src="/assets/js/3.6880a108.js" defer></script>
+  </body>
+</html>

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>ipairs与pairs | sjc的blog</title>
+    <meta name="generator" content="VuePress 1.8.2">
+    
+    <meta name="description" content="sjc的知识梳理">
+    
+    <link rel="preload" href="/assets/css/0.styles.144bab3a.css" as="style"><link rel="preload" href="/assets/js/app.4771038d.js" as="script"><link rel="preload" href="/assets/js/2.7a57565e.js" as="script"><link rel="preload" href="/assets/js/11.4e08c27f.js" as="script"><link rel="prefetch" href="/assets/js/10.56533af8.js"><link rel="prefetch" href="/assets/js/12.d3ab59bf.js"><link rel="prefetch" href="/assets/js/13.fd69b434.js"><link rel="prefetch" href="/assets/js/14.df84de9b.js"><link rel="prefetch" href="/assets/js/15.3459f7fb.js"><link rel="prefetch" href="/assets/js/16.9da94d5d.js"><link rel="prefetch" href="/assets/js/17.0b19bcdd.js"><link rel="prefetch" href="/assets/js/18.9efe4c7f.js"><link rel="prefetch" href="/assets/js/3.6880a108.js"><link rel="prefetch" href="/assets/js/4.fa9e152b.js"><link rel="prefetch" href="/assets/js/5.b5d6e115.js"><link rel="prefetch" href="/assets/js/6.a064f96f.js"><link rel="prefetch" href="/assets/js/7.5a285784.js"><link rel="prefetch" href="/assets/js/8.c62bbc41.js"><link rel="prefetch" href="/assets/js/9.8e802ee2.js">
+    <link rel="stylesheet" href="/assets/css/0.styles.144bab3a.css">
+  </head>
+  <body>
+    <div id="app" data-server-rendered="true"><div class="theme-container"><header class="navbar"><div class="sidebar-button"><svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" role="img" viewBox="0 0 448 512" class="icon"><path fill="currentColor" d="M436 124H12c-6.627 0-12-5.373-12-12V80c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12zm0 160H12c-6.627 0-12-5.373-12-12v-32c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12zm0 160H12c-6.627 0-12-5.373-12-12v-32c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12z"></path></svg></div> <a href="/" class="home-link router-link-active"><!----> <span class="site-name">sjc的blog</span></a> <div class="links"><div class="search-box"><input aria-label="Search" autocomplete="off" spellcheck="false" value=""> <!----></div> <nav class="nav-links can-hide"><div class="nav-item"><a href="/unity/" class="nav-link">
+  Unity
+</a></div><div class="nav-item"><a href="/lua/" class="nav-link router-link-active">
+  Lua
+</a></div> <!----></nav></div></header> <div class="sidebar-mask"></div> <aside class="sidebar"><nav class="nav-links"><div class="nav-item"><a href="/unity/" class="nav-link">
+  Unity
+</a></div><div class="nav-item"><a href="/lua/" class="nav-link router-link-active">
+  Lua
+</a></div> <!----></nav>  <ul class="sidebar-links"><li><a href="/lua/baseType.html" class="sidebar-link">基础类型</a></li><li><a href="/lua/ipairsandpairs.html" aria-current="page" class="active sidebar-link">ipairs与pairs</a></li><li><a href="/lua/next.html" class="sidebar-link">next</a></li><li><a href="/lua/luaSourceCode_TValue.html" class="sidebar-link">lua源码TValue</a></li></ul> </aside> <main class="page"> <div class="theme-default-content content__default"><h1 id="ipairs与pairs"><a href="#ipairs与pairs" class="header-anchor">#</a> ipairs与pairs</h1> <p>说到这两者首先是需要说明lua的泛型for<br>
+泛型for的格式如下</p> <div class="language-lua extra-class"><pre class="language-lua"><code><span class="token keyword">for</span> 参数列表 <span class="token keyword">in</span> FunctionList <span class="token keyword">do</span>
+<span class="token keyword">end</span>
+</code></pre></div><p>lua内部的实现</p> <div class="language-lua extra-class"><pre class="language-lua"><code><span class="token keyword">local</span> func<span class="token punctuation">,</span> v1<span class="token punctuation">,</span> v2 <span class="token operator">=</span> FunctionList
+<span class="token keyword">while</span> <span class="token keyword">true</span> <span class="token keyword">do</span>
+    <span class="token keyword">local</span> s1<span class="token punctuation">,</span>s2 <span class="token punctuation">....</span> sn <span class="token operator">=</span> <span class="token function">func</span><span class="token punctuation">(</span>v1<span class="token punctuation">,</span>v2<span class="token punctuation">)</span>
+    _v2 <span class="token operator">=</span> s1
+    <span class="token keyword">if</span> v2 <span class="token operator">==</span> <span class="token keyword">nil</span> <span class="token keyword">then</span>
+        <span class="token keyword">break</span>
+    <span class="token keyword">end</span>
+<span class="token keyword">end</span>
+</code></pre></div><p>首先是函数参数列表FunctionList<br>
+这个列表只接受列表中的前三个值<br>
+1.迭代函数func<br>
+2.不可变状态v1<br>
+3.控制变量v2<br>
+然后是参数列表<br>
+参数列表为迭代函数执行的返回值即s1,s2</p> <p>lua里提供了ipairs和pairs作为迭代器<br>
+ipairs的实现如下</p> <div class="language-lua extra-class"><pre class="language-lua"><code><span class="token keyword">local</span> iter <span class="token operator">=</span> <span class="token keyword">function</span><span class="token punctuation">(</span>t<span class="token punctuation">,</span> i<span class="token punctuation">)</span>
+    i <span class="token operator">=</span> i <span class="token operator">+</span> <span class="token number">1</span>
+    <span class="token keyword">local</span> v <span class="token operator">=</span> t<span class="token punctuation">[</span>i<span class="token punctuation">]</span>
+    <span class="token keyword">if</span> v <span class="token keyword">then</span>
+        <span class="token keyword">return</span> i<span class="token punctuation">,</span> v
+    <span class="token keyword">end</span>
+<span class="token keyword">end</span>
+
+<span class="token keyword">function</span> <span class="token function">ipairs</span><span class="token punctuation">(</span>t<span class="token punctuation">)</span>
+    <span class="token keyword">return</span> iter<span class="token punctuation">,</span> t<span class="token punctuation">,</span> <span class="token number">0</span>
+<span class="token keyword">end</span>
+</code></pre></div><p>pairs的实现如下</p> <div class="language-lua extra-class"><pre class="language-lua"><code><span class="token keyword">function</span> <span class="token function">pairs</span><span class="token punctuation">(</span>t<span class="token punctuation">)</span>
+    <span class="token keyword">return</span> next<span class="token punctuation">,</span> t<span class="token punctuation">,</span> <span class="token keyword">nil</span>
+<span class="token keyword">end</span>
+</code></pre></div><p>由他们的实现可以看出两者的区别<br>
+1.ipairs是会去判断对应下标是否在table中是否有对应的value，即形如{[1]=a,[2]=b,[4]=d},或{a,b,nil,d}这种均会在遇见nil时循环终止。<br>
+其中，对于table来说，其中的键值对并不会影响table中值的下标，<br>
+Local t = {&quot;a&quot; , &quot;b&quot;, x=1, &quot;c&quot;}，其中的t[3] = &quot;c&quot;,所以对于t的ipairs循环是可以遍历出abc的，只是无法遍历键值对。<br>
+2.ipairs的优势是有序遍历，pairs的优势是能保证完整遍历<br>
+3.两者没有效率上的差异</p></div> <footer class="page-edit"><!----> <!----></footer> <div class="page-nav"><p class="inner"><span class="prev">
+      ←
+      <a href="/lua/baseType.html" class="prev">
+        基础类型
+      </a></span> <span class="next"><a href="/lua/next.html">
+        next
+      </a>
+      →
+    </span></p></div> </main></div><div class="global-ui"></div></div>
+    <script src="/assets/js/app.4771038d.js" defer></script><script src="/assets/js/2.7a57565e.js" defer></script><script src="/assets/js/11.4e08c27f.js" defer></script>
+  </body>
+</html>
